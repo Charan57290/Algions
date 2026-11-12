@@ -6,6 +6,9 @@ import dotenv from 'dotenv';
 import healthRoutes from './routes/health.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
+import categoryRoutes from './routes/category.routes.js';
+import supplierRoutes from './routes/supplier.routes.js';
+import medicineRoutes from './routes/medicine.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -32,6 +35,9 @@ export const createApp = (): Express => {
   app.use('/api/health', healthRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/users', userRoutes);
+  app.use('/api/categories', categoryRoutes);
+  app.use('/api/suppliers', supplierRoutes);
+  app.use('/api/medicines', medicineRoutes);
 
   // 404 handler
   app.use('*', (req, res) => {

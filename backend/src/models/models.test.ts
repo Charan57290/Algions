@@ -23,6 +23,13 @@ const TEST_MONGODB_URI =
 beforeAll(async () => {
   await mongoose.connect(TEST_MONGODB_URI);
   await mongoose.connection.dropDatabase();
+  await Promise.all([
+    User.init(),
+    Category.init(),
+    Supplier.init(),
+    Medicine.init(),
+    Batch.init(),
+  ]);
 });
 
 afterAll(async () => {
