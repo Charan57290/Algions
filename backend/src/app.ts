@@ -15,6 +15,7 @@ import movementRoutes from './routes/movement.routes.js';
 import saleRoutes from './routes/sale.routes.js';
 import returnRoutes from './routes/return.routes.js';
 import adjustmentRoutes from './routes/adjustment.routes.js';
+import reportRoutes from './routes/report.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -50,6 +51,7 @@ export const createApp = (): Express => {
   app.use('/api/sales', saleRoutes);
   app.use('/api/returns', returnRoutes);
   app.use('/api/adjustments', adjustmentRoutes);
+  app.use('/api/reports', reportRoutes);
 
   // 404 handler
   app.use('*', (req, res) => {
