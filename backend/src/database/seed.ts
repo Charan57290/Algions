@@ -21,11 +21,16 @@ dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/pharmacy_management';
 
-export const seedDatabase = async () => {
+export const seedDatabase = async (shouldClose = false) => {
+  const isDirectRun = process.argv[1] && (process.argv[1].endsWith('seed.ts') || process.argv[1].endsWith('seed.js'));
+  const needsClose = shouldClose || isDirectRun;
+
   try {
-    console.log(`[Seed] Connecting to MongoDB: ${MONGODB_URI}`);
-    await mongoose.connect(MONGODB_URI);
-    console.log('[Seed] Connected successfully.');
+    if (mongoose.connection.readyState === 0) {
+      console.log(`[Seed] Connecting to MongoDB: ${MONGODB_URI}`);
+      await mongoose.connect(MONGODB_URI);
+      console.log('[Seed] Connected successfully.');
+    }
 
     console.log('[Seed] Clearing existing collections...');
     await Promise.all([
@@ -50,6 +55,15 @@ export const seedDatabase = async () => {
       isActive: true,
     });
 
+    await User.create({
+      name: 'Pharmacy Admin',
+      email: 'admin@pharmacy.com',
+      password: 'Admin@123',
+      role: UserRole.ADMIN,
+      phone: '+91 98765 00001',
+      isActive: true,
+    });
+
     const staffUser = await User.create({
       name: 'Sarah Jenkins (Pharmacist)',
       email: 'pharmacist@pharmacare.com',
@@ -59,12 +73,30 @@ export const seedDatabase = async () => {
       isActive: true,
     });
 
+    await User.create({
+      name: 'Lead Pharmacist',
+      email: 'pharmacist@pharmacy.com',
+      password: 'Pharmacist@123',
+      role: UserRole.PHARMACIST,
+      phone: '+91 98765 00002',
+      isActive: true,
+    });
+
     const customerUser = await User.create({
       name: 'Rahul Sharma (Customer)',
       email: 'customer@pharmacare.com',
       password: 'CustomerPassword@123',
       role: UserRole.CUSTOMER,
       phone: '+91 98765 43212',
+      isActive: true,
+    });
+
+    await User.create({
+      name: 'Walk-in Customer Demo',
+      email: 'customer@pharmacy.com',
+      password: 'Customer@123',
+      role: UserRole.CUSTOMER,
+      phone: '+91 98765 00003',
       isActive: true,
     });
     console.log(`[Seed] Seeded 3 users. Admin ID: ${adminUser._id}`);
@@ -413,10 +445,15 @@ export const seedDatabase = async () => {
     console.log('======================================================\n');
   } catch (error) {
     console.error('[Seed] Error seeding database:', error);
-    process.exit(1);
+    if (needsClose) {
+      process.exit(1);
+    }
+    throw error;
   } finally {
-    await mongoose.connection.close();
-    console.log('[Seed] MongoDB connection closed.');
+    if (needsClose) {
+      await mongoose.connection.close();
+      console.log('[Seed] MongoDB connection closed.');
+    }
   }
 };
 
