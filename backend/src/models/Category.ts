@@ -42,9 +42,9 @@ const CategorySchema = new Schema<ICategory>(
   }
 );
 
-// Auto-generate slug before save
-CategorySchema.pre<ICategory>('save', function (next) {
-  if (this.isModified('name') || !this.slug) {
+// Auto-generate slug before validate
+CategorySchema.pre<ICategory>('validate', function (next) {
+  if (this.name && (!this.slug || this.isModified('name'))) {
     this.slug = this.name
       .toLowerCase()
       .trim()

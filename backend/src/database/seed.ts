@@ -72,14 +72,14 @@ export const seedDatabase = async () => {
     // 2. Seed Categories
     console.log('[Seed] Seeding Categories...');
     const categoriesData = [
-      { name: 'Analgesics & Antipyretics', description: 'Pain relief and fever reduction medications' },
-      { name: 'Antibiotics', description: 'Anti-bacterial prescription pharmaceuticals' },
-      { name: 'Cardiovascular', description: 'Heart and blood pressure management therapies' },
-      { name: 'Antidiabetic', description: 'Blood glucose regulation and insulin management' },
-      { name: 'Gastrointestinal', description: 'Antacids, proton pump inhibitors, and gut health' },
-      { name: 'Respiratory', description: 'Bronchodilators, anti-allergics, and cough syrups' },
-      { name: 'Dermatological', description: 'Topical ointments, creams, and skin therapies' },
-      { name: 'Vitamins & Supplements', description: 'Nutritional wellness, minerals, and vitamins' },
+      { name: 'Analgesics & Antipyretics', slug: 'analgesics-antipyretics', description: 'Pain relief and fever reduction medications' },
+      { name: 'Antibiotics', slug: 'antibiotics', description: 'Anti-bacterial prescription pharmaceuticals' },
+      { name: 'Cardiovascular', slug: 'cardiovascular', description: 'Heart and blood pressure management therapies' },
+      { name: 'Antidiabetic', slug: 'antidiabetic', description: 'Blood glucose regulation and insulin management' },
+      { name: 'Gastrointestinal', slug: 'gastrointestinal', description: 'Antacids, proton pump inhibitors, and gut health' },
+      { name: 'Respiratory', slug: 'respiratory', description: 'Bronchodilators, anti-allergics, and cough syrups' },
+      { name: 'Dermatological', slug: 'dermatological', description: 'Topical ointments, creams, and skin therapies' },
+      { name: 'Vitamins & Supplements', slug: 'vitamins-supplements', description: 'Nutritional wellness, minerals, and vitamins' },
     ];
     const categories = await Category.insertMany(categoriesData);
     const catMap = new Map(categories.map((c) => [c.name, c._id]));
