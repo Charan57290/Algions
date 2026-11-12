@@ -1,0 +1,28 @@
+{
+  "name": "algions-pharmacy-management-system",
+  "version": "1.0.0",
+  "description": "Production-grade Pharmacy Management System for Algions AI Labs Full-Stack Assessment",
+  "private": true,
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "test:backend": "npm --prefix backend run test",
+    "test:frontend": "npm --prefix frontend run test",
+    "test": "npm run test:backend",
+    "seed": "npm --prefix backend run seed"
+  },
+  "keywords": [
+    "pharmacy-management",
+    "fefo-inventory",
+    "pos-billing",
+    "fullstack",
+    "react",
+    "nodejs",
+    "express",
+    "mongodb"
+  ],
+  "author": "Thota Kalicharan",
+  "license": "ISC"
+}

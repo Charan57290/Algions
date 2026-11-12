@@ -1,0 +1,2 @@
+# Models
+Mongoose schemas: User, Medicine, Category, Supplier, Batch, Purchase, Sale, Return, StockMovement, AuditLog.

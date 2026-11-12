@@ -1,0 +1,2 @@
+# Validators
+Zod schemas for request validation (auth, medicines, sales, batches).
