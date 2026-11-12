@@ -1,30 +1,43 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import mongoose from 'mongoose';
-import app from '../app';
+import { createApp } from '../app.js';
 import {
   User,
+  UserRole,
   Category,
   Supplier,
+  SupplierStatus,
   Medicine,
+  DosageForm,
+  UnitOfMeasurement,
   Batch,
   StockMovement,
-  Purchase,
+  MovementType,
   Sale,
-  Return,
-  StockAdjustment,
-} from '../models';
-import { seedDatabase } from '../database/seed';
+  AdjustmentType,
+  AdjustmentReason,
+} from '../models/index.js';
+import { generateToken } from '../utils/jwt.js';
 
 const MONGODB_TEST_URI =
   process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/pharmacy_management_e2e';
 
+const app = createApp();
+
 describe('Phase 10: End-to-End Pharmacy Lifecycle & Security Verification', () => {
+  let adminUser: any;
+  let pharmacistUser: any;
+  let customerUser: any;
+
   let adminToken: string;
   let pharmacistToken: string;
   let customerToken: string;
-  let testSupplierId: string;
-  let testMedicineId: string;
+
+  let testCategory: any;
+  let testSupplier: any;
+  let testMedicine: any;
+
   let createdBatchId: string;
   let createdBatchNumber: string;
   let completedSaleId: string;
@@ -34,68 +47,109 @@ describe('Phase 10: End-to-End Pharmacy Lifecycle & Security Verification', () =
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(MONGODB_TEST_URI);
     }
-    // Clean and seed fresh database
     await mongoose.connection.dropDatabase();
-    await seedDatabase(false);
+    await Promise.all([
+      User.init(),
+      Category.init(),
+      Supplier.init(),
+      Medicine.init(),
+      Batch.init(),
+      StockMovement.init(),
+    ]);
 
-    // Authenticate Admin
-    const adminRes = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'admin@pharmacy.com', password: 'Admin@123' });
-    expect(adminRes.status).toBe(200);
-    adminToken = adminRes.body.data.token;
+    // 1. Create Core Users
+    adminUser = await User.create({
+      name: 'Dr. Alok Verma (Admin)',
+      email: 'admin@e2e.test',
+      password: 'AdminPassword@123',
+      role: UserRole.ADMIN,
+    });
+    adminToken = generateToken({
+      userId: adminUser._id.toString(),
+      email: adminUser.email,
+      role: adminUser.role,
+    });
 
-    // Authenticate Pharmacist
-    const pharmRes = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'pharmacist@pharmacy.com', password: 'Pharmacist@123' });
-    expect(pharmRes.status).toBe(200);
-    pharmacistToken = pharmRes.body.data.token;
+    pharmacistUser = await User.create({
+      name: 'Sarah Jenkins (Pharmacist)',
+      email: 'pharmacist@e2e.test',
+      password: 'StaffPassword@123',
+      role: UserRole.PHARMACIST,
+    });
+    pharmacistToken = generateToken({
+      userId: pharmacistUser._id.toString(),
+      email: pharmacistUser.email,
+      role: pharmacistUser.role,
+    });
 
-    // Authenticate Customer
-    const custRes = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'customer@pharmacy.com', password: 'Customer@123' });
-    expect(custRes.status).toBe(200);
-    customerToken = custRes.body.data.token;
-  }, 25000);
+    customerUser = await User.create({
+      name: 'Rahul Sharma (Customer)',
+      email: 'customer@e2e.test',
+      password: 'CustomerPassword@123',
+      role: UserRole.CUSTOMER,
+    });
+    customerToken = generateToken({
+      userId: customerUser._id.toString(),
+      email: customerUser.email,
+      role: customerUser.role,
+    });
+
+    // 2. Create Master Category & Supplier
+    testCategory = await Category.create({
+      name: 'Antibiotics & Antimicrobials',
+      slug: 'antibiotics-antimicrobials-e2e',
+      description: 'Prescription antibiotics',
+    });
+
+    testSupplier = await Supplier.create({
+      name: 'Apex Pharma Distribution',
+      supplierCode: 'SUPP-APEX-01',
+      contactPerson: 'Vikram Sharma',
+      email: 'orders@apexpharma.test',
+      phone: '+91 98765 11111',
+      gstin: '27AABCU9603R1ZM',
+      status: SupplierStatus.ACTIVE,
+    });
+
+    // 3. Create Master Medicine
+    testMedicine = await Medicine.create({
+      medicineCode: 'MED-AMOX-500',
+      name: 'Amoxicillin 500mg Capsules',
+      genericName: 'Amoxicillin Trihydrate',
+      brandName: 'Amoxil',
+      category: testCategory._id,
+      manufacturer: 'GlaxoSmithKline',
+      dosageForm: DosageForm.CAPSULE,
+      strength: '500mg',
+      sku: 'MED-AMOX-500-E2E',
+      barcode: '8901234999999',
+      unitOfMeasurement: UnitOfMeasurement.STRIP,
+      reorderThreshold: 20,
+      requiresPrescription: true,
+      isActive: true,
+    });
+  }, 30000);
 
   afterAll(async () => {
     await mongoose.connection.dropDatabase();
-    await mongoose.disconnect();
+    await mongoose.connection.close();
   });
 
-  describe('Step 1: Master Data & Stock Inward Consignment (Goods Receiving)', () => {
-    it('should find active suppliers and medicines from seed', async () => {
-      const suppRes = await request(app)
-        .get('/api/suppliers')
-        .set('Authorization', `Bearer ${adminToken}`);
-      expect(suppRes.status).toBe(200);
-      expect(suppRes.body.data.length).toBeGreaterThan(0);
-      testSupplierId = suppRes.body.data[0]._id;
-
-      const medRes = await request(app)
-        .get('/api/medicines')
-        .set('Authorization', `Bearer ${pharmacistToken}`);
-      expect(medRes.status).toBe(200);
-      expect(medRes.body.data.medicines.length).toBeGreaterThan(0);
-      testMedicineId = medRes.body.data.medicines[0]._id;
-    });
-
+  describe('Step 1: Stock Inward Consignment (Goods Receiving & Batch Creation)', () => {
     it('should receive a fresh purchase order consignment and create a discrete batch', async () => {
       createdBatchNumber = `E2E-LOT-${Date.now().toString().slice(-5)}`;
       const mfgDate = new Date();
       const expDate = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000); // 180 days out
 
       const inwardPayload = {
-        supplier: testSupplierId,
+        supplierId: testSupplier._id.toString(),
         supplierInvoiceNumber: `INV-E2E-SUPP-${Date.now().toString().slice(-4)}`,
         items: [
           {
-            medicine: testMedicineId,
+            medicineId: testMedicine._id.toString(),
             batchNumber: createdBatchNumber,
-            manufacturingDate: mfgDate.toISOString(),
-            expiryDate: expDate.toISOString(),
+            manufacturingDate: mfgDate.toISOString().split('T')[0],
+            expiryDate: expDate.toISOString().split('T')[0],
             purchasePrice: 20.0,
             sellingPrice: 35.0,
             quantity: 50,
@@ -111,7 +165,7 @@ describe('Phase 10: End-to-End Pharmacy Lifecycle & Security Verification', () =
 
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.purchaseOrderNumber).toMatch(/^PO-\d{6}-\d{4}$/);
+      expect(res.body.data.purchaseNumber).toMatch(/^PO-\d{8}-\d{4}$/);
 
       // Verify batch existence in DB
       const batchDoc = await Batch.findOne({ batchNumber: createdBatchNumber });
@@ -123,7 +177,7 @@ describe('Phase 10: End-to-End Pharmacy Lifecycle & Security Verification', () =
       // Verify stock movement ledger record
       const movement = await StockMovement.findOne({
         batch: createdBatchId,
-        movementType: 'PURCHASE_RECEIPT',
+        movementType: MovementType.PURCHASE_RECEIVED,
       });
       expect(movement).not.toBeNull();
       expect(movement?.quantityAdded).toBe(50);
@@ -134,28 +188,26 @@ describe('Phase 10: End-to-End Pharmacy Lifecycle & Security Verification', () =
   describe('Step 2: FEFO Allocation Preview & POS Billing Checkout', () => {
     it('should preview FEFO allocation prior to checkout', async () => {
       const previewRes = await request(app)
-        .post('/api/sales/preview-fefo')
-        .set('Authorization', `Bearer ${pharmacistToken}`)
-        .send({
-          items: [{ medicineId: testMedicineId, quantity: 15 }],
-        });
+        .get(`/api/batches/fefo-preview?medicine=${testMedicine._id.toString()}&quantity=15`)
+        .set('Authorization', `Bearer ${pharmacistToken}`);
 
       expect(previewRes.status).toBe(200);
       expect(previewRes.body.success).toBe(true);
-      const preview = previewRes.body.data[0];
-      expect(preview.isFullyAllocated).toBe(true);
-      expect(preview.allocatedQuantity).toBe(15);
+      const preview = previewRes.body.data;
+      expect(preview.requestedQuantity).toBe(15);
       expect(preview.allocations.length).toBeGreaterThan(0);
+      expect(preview.isSufficient).toBe(true);
     });
 
     it('should complete sale, deduct batch stock via FEFO, and generate invoice', async () => {
       const salePayload = {
-        items: [{ medicineId: testMedicineId, quantity: 10 }],
-        customerName: 'Ananya Sharma',
-        customerPhone: '9876543210',
-        doctorName: 'Dr. S. K. Gupta',
+        customer: {
+          name: 'Ananya Sharma',
+          phone: '9876543210',
+        },
+        items: [{ medicineId: testMedicine._id.toString(), quantity: 10 }],
         paymentMethod: 'UPI',
-        discountAmount: 10,
+        totalDiscount: 10,
         notes: 'Regular customer prescription dispensing.',
       };
 
@@ -167,19 +219,23 @@ describe('Phase 10: End-to-End Pharmacy Lifecycle & Security Verification', () =
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
       expect(res.body.data.invoiceNumber).toMatch(/^INV-\d{6}-\d{4}$/);
-      expect(res.body.data.status).toBe('COMPLETED');
-      expect(res.body.data.totalAmount).toBeGreaterThan(0);
+      expect(res.body.data.grandTotal).toBeGreaterThan(0);
 
       completedSaleId = res.body.data._id;
       invoiceNumber = res.body.data.invoiceNumber;
 
-      // Verify stock movement of SALE_DISPENSE was recorded
+      // Verify batch stock was deducted by exactly 10
+      const batchAfterSale = await Batch.findById(createdBatchId);
+      expect(batchAfterSale?.availableQuantity).toBe(40);
+
+      // Verify stock movement of SALE was recorded
       const saleMovement = await StockMovement.findOne({
-        referenceId: completedSaleId,
-        movementType: 'SALE_DISPENSE',
+        relatedTransactionId: invoiceNumber,
+        movementType: MovementType.SALE,
       });
       expect(saleMovement).not.toBeNull();
-      expect(saleMovement?.quantityRemoved).toBeGreaterThan(0);
+      expect(saleMovement?.quantityRemoved).toBe(10);
+      expect(saleMovement?.newBalance).toBe(40);
     });
 
     it('should generate printable tax invoice payload', async () => {
@@ -190,34 +246,26 @@ describe('Phase 10: End-to-End Pharmacy Lifecycle & Security Verification', () =
       expect(invRes.status).toBe(200);
       expect(invRes.body.success).toBe(true);
       const invoiceData = invRes.body.data;
-      expect(invoiceData.pharmacyDetails.name).toBe('Algions Pharmacy');
-      expect(invoiceData.invoice.invoiceNumber).toBe(invoiceNumber);
-      expect(invoiceData.invoice.customerName).toBe('Ananya Sharma');
+      expect(invoiceData.pharmacyHeader.storeName).toBe('PharmaCare Pharmacy & Medical Store');
+      expect(invoiceData.invoiceMeta.invoiceNumber).toBe(invoiceNumber);
+      expect(invoiceData.customer.name).toBe('Ananya Sharma');
       expect(invoiceData.items.length).toBeGreaterThan(0);
-      expect(invoiceData.financialSummary.netPayable).toBeGreaterThan(0);
+      expect(invoiceData.summary.grandTotal).toBeGreaterThan(0);
     });
   });
 
   describe('Step 3: Customer Return & Restock Safety Evaluation', () => {
     it('should process customer return, restore undamaged goods to batch, and update invoice status', async () => {
-      // Find the batch that was sold in the transaction
-      const sale = await Sale.findById(completedSaleId);
-      expect(sale).not.toBeNull();
-      const soldItem = sale!.items[0];
-      const soldBatchId = soldItem.batch.toString();
-
-      const batchBeforeReturn = await Batch.findById(soldBatchId);
-      const balanceBeforeReturn = batchBeforeReturn!.availableQuantity;
-
       const returnPayload = {
         saleId: completedSaleId,
-        reason: 'Patient prescribed revised dosage by consulting physician.',
+        overallReason: 'Patient prescribed revised dosage by consulting physician.',
         items: [
           {
-            batchId: soldBatchId,
-            quantity: 2,
-            restock: true,
-            condition: 'UNDAMAGED',
+            medicineId: testMedicine._id.toString(),
+            batchId: createdBatchId,
+            quantityReturned: 2,
+            reason: 'Revised dosage',
+            restockable: true,
           },
         ],
       };
@@ -232,9 +280,9 @@ describe('Phase 10: End-to-End Pharmacy Lifecycle & Security Verification', () =
       expect(res.body.data.returnNumber).toMatch(/^RET-\d{6}-\d{4}$/);
       expect(res.body.data.totalRefundAmount).toBeGreaterThan(0);
 
-      // Verify batch stock was restored by exactly 2 units
-      const batchAfterReturn = await Batch.findById(soldBatchId);
-      expect(batchAfterReturn!.availableQuantity).toBe(balanceBeforeReturn + 2);
+      // Verify batch stock was restored from 40 to 42
+      const batchAfterReturn = await Batch.findById(createdBatchId);
+      expect(batchAfterReturn!.availableQuantity).toBe(42);
 
       // Verify sale status transition to PARTIALLY_REFUNDED
       const updatedSale = await Sale.findById(completedSaleId);
@@ -242,19 +290,16 @@ describe('Phase 10: End-to-End Pharmacy Lifecycle & Security Verification', () =
     });
 
     it('should reject over-return exceeding purchased quantity', async () => {
-      const sale = await Sale.findById(completedSaleId);
-      const soldItem = sale!.items[0];
-      const soldBatchId = soldItem.batch.toString();
-
       const overReturnPayload = {
         saleId: completedSaleId,
-        reason: 'Attempting invalid excess return.',
+        overallReason: 'Attempting invalid excess return.',
         items: [
           {
-            batchId: soldBatchId,
-            quantity: 100, // Exceeds 10 sold
-            restock: false,
-            condition: 'DAMAGED',
+            medicineId: testMedicine._id.toString(),
+            batchId: createdBatchId,
+            quantityReturned: 100, // Exceeds 10 sold
+            reason: 'Excess return',
+            restockable: false,
           },
         ],
       };
@@ -271,14 +316,14 @@ describe('Phase 10: End-to-End Pharmacy Lifecycle & Security Verification', () =
 
   describe('Step 4: Audited Stock Adjustment & Non-Negative Inventory Guard', () => {
     it('should record audited stock decrease with mandatory reason code', async () => {
-      const batch = await Batch.findById(createdBatchId);
-      const prevQty = batch!.availableQuantity;
+      const batchBeforeAdj = await Batch.findById(createdBatchId);
+      const prevQty = batchBeforeAdj!.availableQuantity;
 
       const adjPayload = {
         batchId: createdBatchId,
-        adjustmentType: 'DECREASE',
-        quantity: 5,
-        reasonCode: 'DAMAGE',
+        adjustmentType: AdjustmentType.DECREASE,
+        adjustedQuantity: 5,
+        reason: AdjustmentReason.DAMAGED_GOODS,
         remarks: 'Ampoule broken during routine shelving by night shift.',
       };
 
@@ -295,7 +340,7 @@ describe('Phase 10: End-to-End Pharmacy Lifecycle & Security Verification', () =
       // Verify stock movement ledger record
       const adjMovement = await StockMovement.findOne({
         batch: createdBatchId,
-        movementType: 'ADJUSTMENT_DAMAGE',
+        movementType: MovementType.STOCK_ADJUSTMENT,
       });
       expect(adjMovement).not.toBeNull();
       expect(adjMovement?.quantityRemoved).toBe(5);
@@ -310,15 +355,15 @@ describe('Phase 10: End-to-End Pharmacy Lifecycle & Security Verification', () =
         .set('Authorization', `Bearer ${pharmacistToken}`)
         .send({
           batchId: createdBatchId,
-          adjustmentType: 'DECREASE',
-          quantity: excessiveQty,
-          reasonCode: 'COUNT_CORRECTION',
-          remarks: 'Excessive subtraction test.',
+          adjustmentType: AdjustmentType.DECREASE,
+          adjustedQuantity: excessiveQty,
+          reason: AdjustmentReason.STOCKTAKE_CORRECTION,
+          remarks: 'Excessive subtraction test remarks.',
         });
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toContain('Insufficient stock');
+      expect(res.body.message).toContain('Negative stock');
     });
   });
 
@@ -330,11 +375,11 @@ describe('Phase 10: End-to-End Pharmacy Lifecycle & Security Verification', () =
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      const kpis = res.body.data;
-      expect(kpis.inventory.totalBatches).toBeGreaterThan(0);
-      expect(kpis.valuation.totalRetailValuation).toBeGreaterThan(0);
-      expect(kpis.salesPerformance.salesCount).toBeGreaterThan(0);
-      expect(kpis.sevenDayTrend).toBeInstanceOf(Array);
+      const data = res.body.data;
+      expect(data.kpis.totalMedicines).toBeGreaterThan(0);
+      expect(data.kpis.totalAvailableUnits).toBeGreaterThan(0);
+      expect(data.recentSales).toBeInstanceOf(Array);
+      expect(data.salesTrend).toBeInstanceOf(Array);
     });
 
     it('should verify mathematical double-entry stock reconciliation', async () => {
@@ -344,10 +389,10 @@ describe('Phase 10: End-to-End Pharmacy Lifecycle & Security Verification', () =
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.summary.totalActiveBatchesAudited).toBeGreaterThan(0);
+      expect(res.body.data.totalBatchesAudited).toBeGreaterThan(0);
       // Double entry ledger should have zero mathematical discrepancies
-      expect(res.body.data.summary.discrepancyCount).toBe(0);
-      expect(res.body.data.summary.auditPassed).toBe(true);
+      expect(res.body.data.totalDiscrepancies).toBe(0);
+      expect(res.body.data.reconciliationStatus).toBe('PERFECTLY_RECONCILED');
     });
   });
 
