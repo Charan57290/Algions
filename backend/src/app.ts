@@ -12,6 +12,7 @@ import medicineRoutes from './routes/medicine.routes.js';
 import batchRoutes from './routes/batch.routes.js';
 import purchaseRoutes from './routes/purchase.routes.js';
 import movementRoutes from './routes/movement.routes.js';
+import saleRoutes from './routes/sale.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -44,6 +45,7 @@ export const createApp = (): Express => {
   app.use('/api/batches', batchRoutes);
   app.use('/api/purchases', purchaseRoutes);
   app.use('/api/movements', movementRoutes);
+  app.use('/api/sales', saleRoutes);
 
   // 404 handler
   app.use('*', (req, res) => {

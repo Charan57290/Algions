@@ -146,7 +146,7 @@ export const getSaleInvoice = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const invoice = await generatePrintableInvoice(req.params.id);
+    const invoice = await generatePrintableInvoice(req.params.id as string);
     res.status(200).json({
       success: true,
       data: invoice,
