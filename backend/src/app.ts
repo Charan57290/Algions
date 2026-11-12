@@ -9,6 +9,9 @@ import userRoutes from './routes/user.routes.js';
 import categoryRoutes from './routes/category.routes.js';
 import supplierRoutes from './routes/supplier.routes.js';
 import medicineRoutes from './routes/medicine.routes.js';
+import batchRoutes from './routes/batch.routes.js';
+import purchaseRoutes from './routes/purchase.routes.js';
+import movementRoutes from './routes/movement.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -38,6 +41,9 @@ export const createApp = (): Express => {
   app.use('/api/categories', categoryRoutes);
   app.use('/api/suppliers', supplierRoutes);
   app.use('/api/medicines', medicineRoutes);
+  app.use('/api/batches', batchRoutes);
+  app.use('/api/purchases', purchaseRoutes);
+  app.use('/api/movements', movementRoutes);
 
   // 404 handler
   app.use('*', (req, res) => {
