@@ -250,6 +250,16 @@ export const getDetailedSalesReport = async (startDate?: Date, endDate?: Date) =
       grossProfit: Math.round(grossProfit * 100) / 100,
       grossMarginPercent: Math.round(grossMarginPercent * 100) / 100,
     },
+    summary: {
+      netRevenue: Math.round(netRevenue * 100) / 100,
+      totalTransactions: sales.length,
+      totalCogs: Math.round(totalCostOfGoodsSold * 100) / 100,
+      grossProfit: Math.round(grossProfit * 100) / 100,
+      profitMarginPercent: Math.round(grossMarginPercent * 100) / 100,
+      totalTax: Math.round(totalTax * 100) / 100,
+      grossRevenue: Math.round(grossRevenue * 100) / 100,
+      totalDiscounts: Math.round(totalDiscounts * 100) / 100,
+    },
     paymentBreakdown,
     topSellingMedicines,
   };

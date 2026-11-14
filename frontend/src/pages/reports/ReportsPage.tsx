@@ -104,17 +104,17 @@ export const ReportsPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               title="Net Revenue"
-              value={`₹${(salesReport.summary.netRevenue || 0).toLocaleString('en-IN', {
+              value={`₹${(salesReport.summary?.netRevenue ?? salesReport.metrics?.netRevenue ?? 0).toLocaleString('en-IN', {
                 maximumFractionDigits: 2,
               })}`}
-              subtitle={`${salesReport.summary.totalTransactions} transactions`}
+              subtitle={`${salesReport.summary?.totalTransactions ?? salesReport.metrics?.transactionCount ?? 0} transactions`}
               icon={DollarSign}
               iconBgColor="bg-emerald-50"
               iconTextColor="text-emerald-600"
             />
             <StatCard
               title="Cost of Goods Sold (COGS)"
-              value={`₹${(salesReport.summary.totalCogs || 0).toLocaleString('en-IN', {
+              value={`₹${(salesReport.summary?.totalCogs ?? salesReport.metrics?.costOfGoodsSold ?? 0).toLocaleString('en-IN', {
                 maximumFractionDigits: 2,
               })}`}
               subtitle="Batch purchase acquisition cost"
@@ -124,7 +124,7 @@ export const ReportsPage: React.FC = () => {
             />
             <StatCard
               title="Gross Profit"
-              value={`₹${(salesReport.summary.grossProfit || 0).toLocaleString('en-IN', {
+              value={`₹${(salesReport.summary?.grossProfit ?? salesReport.metrics?.grossProfit ?? 0).toLocaleString('en-IN', {
                 maximumFractionDigits: 2,
               })}`}
               subtitle="Net Revenue minus COGS"
@@ -134,8 +134,8 @@ export const ReportsPage: React.FC = () => {
             />
             <StatCard
               title="Gross Margin Percentage"
-              value={`${(salesReport.summary.profitMarginPercent || 0).toFixed(1)}%`}
-              subtitle={`Tax Collected: ₹${(salesReport.summary.totalTax || 0).toFixed(2)}`}
+              value={`${(salesReport.summary?.profitMarginPercent ?? salesReport.metrics?.grossMarginPercent ?? 0).toFixed(1)}%`}
+              subtitle={`Tax Collected: ₹${(salesReport.summary?.totalTax ?? salesReport.metrics?.totalTax ?? 0).toFixed(2)}`}
               icon={CheckCircle2}
               iconBgColor="bg-purple-50"
               iconTextColor="text-purple-600"
@@ -152,9 +152,9 @@ export const ReportsPage: React.FC = () => {
                 <div key={method} className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                   <p className="font-bold text-slate-700">{method}</p>
                   <p className="text-lg font-mono font-bold text-slate-900 mt-1">
-                    ₹{Number(data.amount || 0).toFixed(2)}
+                    ₹{Number(data.amount ?? data.total ?? 0).toFixed(2)}
                   </p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">{data.count} order(s)</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">{data.count || 0} order(s)</p>
                 </div>
               ))}
             </div>

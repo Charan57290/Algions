@@ -345,7 +345,21 @@ export const reportApi = {
   },
   getSalesReport: async (params?: { startDate?: string; endDate?: string }): Promise<any> => {
     const res = await api.get('/reports/sales', { params });
-    return res.data.data;
+    const payload = res.data.data || res.data;
+    if (payload) {
+      const metrics = payload.metrics || {};
+      payload.summary = payload.summary || {
+        netRevenue: metrics.netRevenue || 0,
+        totalTransactions: metrics.transactionCount || 0,
+        totalCogs: metrics.costOfGoodsSold || 0,
+        grossProfit: metrics.grossProfit || 0,
+        profitMarginPercent: metrics.grossMarginPercent || 0,
+        totalTax: metrics.totalTax || 0,
+        grossRevenue: metrics.grossRevenue || 0,
+        totalDiscounts: metrics.totalDiscounts || 0,
+      };
+    }
+    return payload;
   },
   getExpiryRiskReport: async (): Promise<ExpiryRiskCategory[]> => {
     try {
