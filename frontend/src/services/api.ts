@@ -81,7 +81,8 @@ export const authApi = {
   },
   getAllUsers: async (): Promise<User[]> => {
     const res = await api.get('/users');
-    return res.data.data || res.data;
+    const payload = res.data.data;
+    return Array.isArray(payload) ? payload : (payload?.users || res.data.users || []);
   },
   toggleUserStatus: async (userId: string, isActive: boolean): Promise<User> => {
     const res = await api.patch(`/users/${userId}/status`, { isActive });
@@ -95,7 +96,8 @@ export const authApi = {
 export const masterDataApi = {
   getCategories: async (params?: { search?: string; isActive?: boolean }): Promise<Category[]> => {
     const res = await api.get('/categories', { params });
-    return res.data.data;
+    const payload = res.data.data;
+    return Array.isArray(payload) ? payload : (payload?.categories || res.data.categories || []);
   },
   createCategory: async (data: { name: string; description?: string }): Promise<Category> => {
     const res = await api.post('/categories', data);
@@ -111,7 +113,8 @@ export const masterDataApi = {
 
   getSuppliers: async (params?: { search?: string; isActive?: boolean }): Promise<Supplier[]> => {
     const res = await api.get('/suppliers', { params });
-    return res.data.data;
+    const payload = res.data.data;
+    return Array.isArray(payload) ? payload : (payload?.suppliers || res.data.suppliers || []);
   },
   createSupplier: async (data: {
     name: string;
@@ -139,7 +142,12 @@ export const masterDataApi = {
     page?: number;
   }): Promise<{ medicines: Medicine[]; total: number; page: number; totalPages: number }> => {
     const res = await api.get('/medicines', { params });
-    return res.data.data;
+    const payload = res.data.data;
+    const items = Array.isArray(payload) ? payload : (payload?.medicines || res.data.medicines || []);
+    const total = res.data.pagination?.total ?? items.length;
+    const page = res.data.pagination?.page ?? 1;
+    const totalPages = res.data.pagination?.totalPages ?? (res.data.pagination?.pages ?? 1);
+    return { medicines: items, total, page, totalPages };
   },
   getMedicineById: async (id: string): Promise<Medicine> => {
     const res = await api.get(`/medicines/${id}`);
@@ -170,7 +178,10 @@ export const inventoryApi = {
     page?: number;
   }): Promise<{ batches: Batch[]; total: number }> => {
     const res = await api.get('/batches', { params });
-    return res.data.data;
+    const payload = res.data.data;
+    const items = Array.isArray(payload) ? payload : (payload?.batches || res.data.batches || []);
+    const total = res.data.pagination?.total ?? items.length;
+    return { batches: items, total };
   },
   getInventoryValuation: async (): Promise<{
     totalBatchesCount: number;
@@ -182,11 +193,27 @@ export const inventoryApi = {
     expiredValuationLoss: number;
   }> => {
     const res = await api.get('/batches/valuation');
-    return res.data.data;
+    const raw = res.data.data || res.data;
+    if (raw?.activeInventory) {
+      return {
+        totalCostValuation: raw.activeInventory.totalCostValue || 0,
+        totalAvailableUnits: raw.activeInventory.totalUnits || 0,
+        totalRetailValuation: raw.activeInventory.totalRetailValue || 0,
+        potentialGrossProfit: raw.activeInventory.expectedGrossProfit || 0,
+        totalBatchesCount: raw.activeInventory.batchCount || 0,
+        expiredValuationLoss: raw.expiredInventory?.totalLossCost || 0,
+        expiredBatchesCount: raw.expiredInventory?.batchCount || 0,
+        ...raw,
+      };
+    }
+    return raw;
   },
   getPurchases: async (params?: { limit?: number; page?: number }): Promise<{ purchases: Purchase[]; total: number }> => {
     const res = await api.get('/purchases', { params });
-    return res.data.data;
+    const payload = res.data.data;
+    const items = Array.isArray(payload) ? payload : (payload?.purchases || res.data.purchases || []);
+    const total = res.data.pagination?.total ?? items.length;
+    return { purchases: items, total };
   },
   createPurchase: async (data: {
     supplier: string;
@@ -213,7 +240,8 @@ export const inventoryApi = {
     limit?: number;
   }): Promise<StockMovement[]> => {
     const res = await api.get('/movements', { params });
-    return res.data.data;
+    const payload = res.data.data;
+    return Array.isArray(payload) ? payload : (payload?.movements || res.data.movements || []);
   },
 };
 
@@ -246,7 +274,10 @@ export const saleApi = {
     page?: number;
   }): Promise<{ sales: Sale[]; total: number }> => {
     const res = await api.get('/sales', { params });
-    return res.data.data;
+    const payload = res.data.data;
+    const items = Array.isArray(payload) ? payload : (payload?.sales || res.data.sales || []);
+    const total = res.data.pagination?.total ?? items.length;
+    return { sales: items, total };
   },
   getSaleById: async (id: string): Promise<Sale> => {
     const res = await api.get(`/sales/${id}`);
@@ -277,7 +308,10 @@ export const returnApi = {
   },
   getReturns: async (params?: { limit?: number; page?: number }): Promise<{ returns: ReturnRecord[]; total: number }> => {
     const res = await api.get('/returns', { params });
-    return res.data.data;
+    const payload = res.data.data;
+    const items = Array.isArray(payload) ? payload : (payload?.returns || res.data.returns || []);
+    const total = res.data.pagination?.total ?? items.length;
+    return { returns: items, total };
   },
 };
 
@@ -294,7 +328,10 @@ export const adjustmentApi = {
   },
   getAdjustments: async (params?: { limit?: number; page?: number }): Promise<{ adjustments: StockAdjustment[]; total: number }> => {
     const res = await api.get('/adjustments', { params });
-    return res.data.data;
+    const payload = res.data.data;
+    const items = Array.isArray(payload) ? payload : (payload?.adjustments || res.data.adjustments || []);
+    const total = res.data.pagination?.total ?? items.length;
+    return { adjustments: items, total };
   },
 };
 
@@ -311,8 +348,15 @@ export const reportApi = {
     return res.data.data;
   },
   getExpiryRiskReport: async (): Promise<ExpiryRiskCategory[]> => {
-    const res = await api.get('/reports/expiry-risk');
-    return res.data.data;
+    try {
+      const res = await api.get('/reports/expiry-risk');
+      const payload = res.data.data || res.data;
+      return Array.isArray(payload) ? payload : [];
+    } catch {
+      const res = await api.get('/reports/expiry');
+      const payload = res.data.data || res.data;
+      return Array.isArray(payload) ? payload : [];
+    }
   },
   getReconciliationReport: async (): Promise<ReconciliationReport> => {
     const res = await api.get('/reports/reconciliation');

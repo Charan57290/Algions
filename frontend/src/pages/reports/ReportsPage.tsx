@@ -31,7 +31,7 @@ export const ReportsPage: React.FC = () => {
           reportApi.getReconciliationReport(),
         ]);
         setSalesReport(salesRes);
-        setExpiryReport(expiryRes);
+        setExpiryReport(Array.isArray(expiryRes) ? expiryRes : []);
         setReconciliation(reconRes);
       } catch (err) {
         console.error('Failed to load analytical reports:', err);

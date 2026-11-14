@@ -15,7 +15,7 @@ export const UsersPage: React.FC = () => {
     setLoading(true);
     try {
       const data = await authApi.getAllUsers();
-      setUsers(data);
+      setUsers(Array.isArray(data) ? data : ((data as any)?.users || []));
     } catch (err) {
       console.error('Failed to load users:', err);
     } finally {

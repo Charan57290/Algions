@@ -61,8 +61,8 @@ export const MedicinesPage: React.FC = () => {
         }),
         masterDataApi.getCategories({ isActive: true }),
       ]);
-      setMedicines(medsRes.medicines);
-      setCategories(catsRes);
+      setMedicines(Array.isArray(medsRes) ? medsRes : (medsRes?.medicines || []));
+      setCategories(Array.isArray(catsRes) ? catsRes : ((catsRes as any)?.categories || []));
     } catch (err) {
       console.error('Failed to fetch medicines data:', err);
     } finally {

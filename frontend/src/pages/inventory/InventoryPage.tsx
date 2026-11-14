@@ -36,9 +36,9 @@ export const InventoryPage: React.FC = () => {
         inventoryApi.getInventoryValuation(),
         inventoryApi.getStockMovements({ limit: 50 }),
       ]);
-      setBatches(batchesRes.batches);
+      setBatches(Array.isArray(batchesRes) ? batchesRes : (batchesRes?.batches || []));
       setValuation(valuationRes);
-      setMovements(movementsRes);
+      setMovements(Array.isArray(movementsRes) ? movementsRes : ((movementsRes as any)?.movements || []));
     } catch (err) {
       console.error('Failed to load inventory data:', err);
     } finally {
@@ -73,7 +73,7 @@ export const InventoryPage: React.FC = () => {
             }`}
           >
             <Boxes className="w-3.5 h-3.5 inline mr-1" />
-            Active Batches ({batches.length})
+            Active Batches ({(batches || []).length})
           </button>
           <button
             onClick={() => setActiveTab('movements')}

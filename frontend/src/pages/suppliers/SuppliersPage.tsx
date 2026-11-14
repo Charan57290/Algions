@@ -30,7 +30,7 @@ export const SuppliersPage: React.FC = () => {
     setLoading(true);
     try {
       const data = await masterDataApi.getSuppliers({ search: search || undefined });
-      setSuppliers(data);
+      setSuppliers(Array.isArray(data) ? data : ((data as any)?.suppliers || []));
     } catch (err) {
       console.error('Failed to load suppliers:', err);
     } finally {

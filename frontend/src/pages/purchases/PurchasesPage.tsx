@@ -56,14 +56,19 @@ export const PurchasesPage: React.FC = () => {
         masterDataApi.getSuppliers({ isActive: true }),
         masterDataApi.getMedicines({ isActive: true, limit: 100 }),
       ]);
-      setPurchases(purchasesRes.purchases);
-      setSuppliers(suppsRes);
-      setMedicines(medsRes.medicines);
-      if (suppsRes.length > 0) setSelectedSupplier(suppsRes[0]._id);
-      if (medsRes.medicines.length > 0) {
+      const purchasesList = Array.isArray(purchasesRes) ? purchasesRes : (purchasesRes?.purchases || []);
+      const suppsList = Array.isArray(suppsRes) ? suppsRes : ((suppsRes as any)?.suppliers || []);
+      const medsList = Array.isArray(medsRes) ? medsRes : (medsRes?.medicines || []);
+
+      setPurchases(purchasesList);
+      setSuppliers(suppsList);
+      setMedicines(medsList);
+
+      if (suppsList.length > 0) setSelectedSupplier(suppsList[0]._id);
+      if (medsList.length > 0) {
         setItems([
           {
-            medicine: medsRes.medicines[0]._id,
+            medicine: medsList[0]._id,
             batchNumber: `BATCH-${Date.now().toString().slice(-6)}`,
             manufacturingDate: new Date().toISOString().split('T')[0],
             expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],

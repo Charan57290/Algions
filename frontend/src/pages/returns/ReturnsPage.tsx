@@ -66,11 +66,15 @@ export const ReturnsPage: React.FC = () => {
         adjustmentApi.getAdjustments({ limit: 50 }),
         inventoryApi.getBatches({ limit: 100 }),
       ]);
-      setReturns(returnsRes.returns);
-      setAdjustments(adjustmentsRes.adjustments);
-      setBatches(batchesRes.batches);
-      if (batchesRes.batches.length > 0) {
-        setAdjBatchId(batchesRes.batches[0]._id);
+      const returnsList = Array.isArray(returnsRes) ? returnsRes : (returnsRes?.returns || []);
+      const adjList = Array.isArray(adjustmentsRes) ? adjustmentsRes : (adjustmentsRes?.adjustments || []);
+      const batchesList = Array.isArray(batchesRes) ? batchesRes : (batchesRes?.batches || []);
+
+      setReturns(returnsList);
+      setAdjustments(adjList);
+      setBatches(batchesList);
+      if (batchesList.length > 0) {
+        setAdjBatchId(batchesList[0]._id);
       }
     } catch (err) {
       console.error('Failed to load returns and adjustments:', err);

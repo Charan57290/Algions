@@ -54,7 +54,8 @@ export const PosPage: React.FC = () => {
           isActive: true,
           limit: 30,
         });
-        setMedicines(res.medicines);
+        const list = Array.isArray(res) ? res : (res?.medicines || []);
+        setMedicines(list);
       } catch (err) {
         console.error('Failed to load medicines:', err);
       } finally {
@@ -211,20 +212,20 @@ export const PosPage: React.FC = () => {
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
           <div className="flex justify-between items-center mb-3 px-1">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Available Medicines ({medicines.length})
+              Available Medicines ({(medicines || []).length})
             </h3>
             <span className="text-[11px] text-slate-400">Click to add to billing tray</span>
           </div>
 
           {loadingMedicines ? (
             <LoadingSpinner message="Searching medicine catalogue..." />
-          ) : medicines.length === 0 ? (
+          ) : (medicines || []).length === 0 ? (
             <div className="py-12 text-center text-slate-400 text-sm">
               No matching medicines found for "{searchQuery}".
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
-              {medicines.map((med) => {
+              {(medicines || []).map((med) => {
                 const stock = med.totalAvailableStock || 0;
                 const isOutOfStock = stock <= 0;
                 const inCart = cart.some((c) => c.medicine._id === med._id);
