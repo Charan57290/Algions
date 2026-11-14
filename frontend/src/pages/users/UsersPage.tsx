@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Power } from 'lucide-react';
+import { Search, Power, ShieldAlert } from 'lucide-react';
 import { authApi } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import type { User } from '../../types';
 import { Badge } from '../../components/common/Badge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
 export const UsersPage: React.FC = () => {
+  const { isAdmin } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -18,6 +20,7 @@ export const UsersPage: React.FC = () => {
       setUsers(Array.isArray(data) ? data : ((data as any)?.users || []));
     } catch (err) {
       console.error('Failed to load users:', err);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -28,6 +31,10 @@ export const UsersPage: React.FC = () => {
   }, []);
 
   const handleToggleStatus = async (user: User) => {
+    if (!isAdmin) {
+      alert('Administrator privileges are required to modify user access.');
+      return;
+    }
     setActionUserId(user._id);
     try {
       await authApi.toggleUserStatus(user._id, !user.isActive);
@@ -41,11 +48,11 @@ export const UsersPage: React.FC = () => {
     }
   };
 
-  const filteredUsers = users.filter(
+  const filteredUsers = (users || []).filter(
     (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
-      u.role.toLowerCase().includes(search.toLowerCase())
+      (u?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (u?.email || '').toLowerCase().includes(search.toLowerCase()) ||
+      (u?.role || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -61,6 +68,16 @@ export const UsersPage: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {!isAdmin && (
+        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl text-xs flex items-center gap-3">
+          <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0" />
+          <div>
+            <p className="font-bold">Staff Access View</p>
+            <p className="text-amber-700 mt-0.5">Administrator privileges are required to modify user statuses or create staff accounts.</p>
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3">

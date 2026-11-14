@@ -64,7 +64,12 @@ export const SuppliersPage: React.FC = () => {
       contactPerson: s.contactPerson,
       phone: s.phone,
       email: s.email,
-      address: s.address || '',
+      address:
+        typeof s.address === 'object' && s.address !== null
+          ? [(s.address as any).street, (s.address as any).city, (s.address as any).state]
+              .filter(Boolean)
+              .join(', ')
+          : (s.address || ''),
       gstin: s.gstin || '',
     });
     setModalError(null);
@@ -163,7 +168,11 @@ export const SuppliersPage: React.FC = () => {
                       {s.gstin || 'N/A'}
                     </td>
                     <td className="py-3.5 px-5 text-slate-500 max-w-xs truncate">
-                      {s.address || '—'}
+                      {typeof s.address === 'object' && s.address !== null
+                        ? [(s.address as any).street, (s.address as any).city, (s.address as any).state]
+                            .filter(Boolean)
+                            .join(', ') || '—'
+                        : (s.address || '—')}
                     </td>
                     <td className="py-3.5 px-5 text-center">
                       <Badge variant={s.isActive ? 'success' : 'neutral'} size="sm">

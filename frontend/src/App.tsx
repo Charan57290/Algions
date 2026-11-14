@@ -38,10 +38,6 @@ export const App: React.FC = () => {
                 <Route path="/inventory" element={<InventoryPage />} />
                 <Route path="/purchases" element={<PurchasesPage />} />
                 <Route path="/returns" element={<ReturnsPage />} />
-              </Route>
-
-              {/* Admin-Only Accessible */}
-              <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
                 <Route path="/suppliers" element={<SuppliersPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/users" element={<UsersPage />} />

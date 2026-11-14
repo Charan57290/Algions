@@ -57,19 +57,19 @@ export const Sidebar: React.FC = () => {
       label: 'Suppliers',
       path: '/suppliers',
       icon: Truck,
-      allowed: ['ADMIN'],
+      allowed: ['ADMIN', 'PHARMACIST'],
     },
     {
       label: 'Reports & Analytics',
       path: '/reports',
       icon: BarChart3,
-      allowed: ['ADMIN'],
+      allowed: ['ADMIN', 'PHARMACIST'],
     },
     {
       label: 'User Management',
       path: '/users',
       icon: Users,
-      allowed: ['ADMIN'],
+      allowed: ['ADMIN', 'PHARMACIST'],
     },
   ];
 
