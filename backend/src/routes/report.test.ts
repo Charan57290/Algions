@@ -12,7 +12,7 @@ import { StockMovement, MovementType } from '../models/StockMovement.js';
 import { generateToken } from '../utils/jwt.js';
 
 const TEST_MONGODB_URI =
-  process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/pharmacy_reports_test';
+  process.env.TEST_MONGODB_URI || 'mongodb://127.0.0.1:27017/pharmacy_reports_test';
 
 const app = createApp();
 

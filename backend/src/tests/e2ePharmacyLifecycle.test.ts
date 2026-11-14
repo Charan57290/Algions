@@ -21,7 +21,7 @@ import {
 import { generateToken } from '../utils/jwt.js';
 
 const MONGODB_TEST_URI =
-  process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/pharmacy_management_e2e';
+  process.env.TEST_MONGODB_URI || 'mongodb://127.0.0.1:27017/pharmacy_management_e2e';
 
 const app = createApp();
 

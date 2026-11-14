@@ -9,7 +9,7 @@ import { Medicine, DosageForm, UnitOfMeasurement } from '../models/Medicine.js';
 import { generateToken } from '../utils/jwt.js';
 
 const TEST_MONGODB_URI =
-  process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/pharmacy_inventory_routes_test';
+  process.env.TEST_MONGODB_URI || 'mongodb://127.0.0.1:27017/pharmacy_inventory_routes_test';
 
 const app = createApp();
 

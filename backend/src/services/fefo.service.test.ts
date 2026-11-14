@@ -13,7 +13,7 @@ import {
 } from './fefo.service.js';
 
 const TEST_MONGODB_URI =
-  process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/pharmacy_fefo_test';
+  process.env.TEST_MONGODB_URI || 'mongodb://127.0.0.1:27017/pharmacy_fefo_test';
 
 beforeAll(async () => {
   await mongoose.connect(TEST_MONGODB_URI);

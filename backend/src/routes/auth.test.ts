@@ -5,7 +5,7 @@ import { createApp } from '../app.js';
 import { User, UserRole } from '../models/User.js';
 
 const TEST_MONGODB_URI =
-  process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/pharmacy_auth_test';
+  process.env.TEST_MONGODB_URI || 'mongodb://127.0.0.1:27017/pharmacy_auth_test';
 
 const app = createApp();
 

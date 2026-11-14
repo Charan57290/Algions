@@ -10,7 +10,7 @@ import { Batch } from '../models/Batch.js';
 import { generateToken } from '../utils/jwt.js';
 
 const TEST_MONGODB_URI =
-  process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/pharmacy_masterdata_test';
+  process.env.TEST_MONGODB_URI || 'mongodb://127.0.0.1:27017/pharmacy_masterdata_test';
 
 const app = createApp();
 
