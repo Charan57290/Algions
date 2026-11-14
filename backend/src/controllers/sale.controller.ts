@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { Sale, PaymentMethod, SaleStatus } from '../models/Sale.js';
 import { processSaleTransaction, generatePrintableInvoice } from '../services/sale.service.js';
+import { previewFefoAllocation } from '../services/fefo.service.js';
 
 export const createSale = async (
   req: Request,
@@ -158,3 +159,34 @@ export const getSaleInvoice = async (
     });
   }
 };
+
+export const previewBatchFefo = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items)) {
+      res.status(400).json({ success: false, message: 'Items array is required' });
+      return;
+    }
+
+    const results = await Promise.all(
+      items.map(async (item: { medicineId: string; quantity: number }) => {
+        return await previewFefoAllocation(item.medicineId, item.quantity);
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      data: results,
+    });
+  } catch (error: any) {
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Error calculating FEFO allocation preview',
+    });
+  }
+};
+

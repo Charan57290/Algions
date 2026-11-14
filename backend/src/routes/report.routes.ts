@@ -20,6 +20,7 @@ router.get('/sales', getSalesReport);
 router.get('/inventory', getInventoryReport);
 router.get('/valuation', getValuationReport);
 router.get('/expiry', getExpiryReport);
+router.get('/expiry-risk', getExpiryReport);
 router.get('/reconciliation', getReconciliationReportController);
 
 export default router;

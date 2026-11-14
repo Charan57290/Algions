@@ -4,6 +4,7 @@ import {
   getAllSales,
   getSaleById,
   getSaleInvoice,
+  previewBatchFefo,
 } from '../controllers/sale.controller.js';
 import { requireAuth, requireRole } from '../middleware/auth.middleware.js';
 import { validateBody, validateQuery } from '../middleware/validate.js';
@@ -28,6 +29,14 @@ router.get(
   requireRole(UserRole.ADMIN, UserRole.PHARMACIST),
   validateQuery(querySalesSchema),
   getAllSales
+);
+
+// FEFO Batch Allocation Preview
+router.post(
+  '/preview-fefo',
+  requireAuth,
+  requireRole(UserRole.ADMIN, UserRole.PHARMACIST),
+  previewBatchFefo
 );
 
 // View Single Sale Record
