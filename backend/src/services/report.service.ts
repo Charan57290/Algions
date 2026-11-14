@@ -397,11 +397,29 @@ export const getReconciliationReport = async (batchId?: string) => {
     });
   }
 
+  const discrepancies = reconciliationResults
+    .filter((r) => !r.isReconciled)
+    .map((r) => ({
+      batchId: r.batchId.toString(),
+      batchNumber: r.batchNumber,
+      medicineName: r.medicineName || 'Medicine',
+      recordedBalance: r.currentActualStock,
+      calculatedBalance: r.ledgerCalculatedStock,
+      discrepancy: r.variance,
+    }));
+
   return {
     reconciliationTimestamp: new Date().toISOString(),
     totalBatchesAudited: batches.length,
     totalDiscrepancies,
     reconciliationStatus: totalDiscrepancies === 0 ? 'PERFECTLY_RECONCILED' : 'DISCREPANCIES_DETECTED',
     batches: reconciliationResults,
+    summary: {
+      totalActiveBatchesAudited: batches.length,
+      discrepancyCount: totalDiscrepancies,
+      auditPassed: totalDiscrepancies === 0,
+      generatedAt: new Date().toISOString(),
+    },
+    discrepancies,
   };
 };

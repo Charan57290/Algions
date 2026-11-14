@@ -271,91 +271,114 @@ export const ReportsPage: React.FC = () => {
       )}
 
       {/* TAB 3: Mathematical Stock Reconciliation */}
-      {activeTab === 'reconciliation' && reconciliation && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div
-                className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                  reconciliation.summary.auditPassed
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'bg-rose-100 text-rose-700'
-                }`}
-              >
-                {reconciliation.summary.auditPassed ? (
-                  <CheckCircle2 className="w-6 h-6" />
-                ) : (
-                  <ShieldAlert className="w-6 h-6" />
-                )}
+      {activeTab === 'reconciliation' && reconciliation && (() => {
+        const auditPassed =
+          reconciliation.summary?.auditPassed ??
+          ((reconciliation as any).totalDiscrepancies === 0 ||
+            (reconciliation as any).reconciliationStatus === 'PERFECTLY_RECONCILED');
+        const totalAudited =
+          reconciliation.summary?.totalActiveBatchesAudited ??
+          ((reconciliation as any).totalBatchesAudited ??
+            ((reconciliation as any).batches?.length || 0));
+        const discrepanciesList =
+          reconciliation.discrepancies ||
+          ((reconciliation as any).batches || [])
+            .filter((b: any) => !b.isReconciled || b.variance !== 0)
+            .map((b: any) => ({
+              batchId: b.batchId?.toString() || b._id,
+              batchNumber: b.batchNumber,
+              medicineName: b.medicineName || 'Medicine',
+              recordedBalance: b.currentActualStock ?? 0,
+              calculatedBalance: b.ledgerCalculatedStock ?? 0,
+              discrepancy: b.variance ?? 0,
+            }));
+
+        return (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                    auditPassed
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-rose-100 text-rose-700'
+                  }`}
+                >
+                  {auditPassed ? (
+                    <CheckCircle2 className="w-6 h-6" />
+                  ) : (
+                    <ShieldAlert className="w-6 h-6" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {auditPassed
+                      ? 'Double-Entry Audit Ledger Verified'
+                      : 'Discrepancies Detected in Ledger'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Verified mathematical formula: Opening Balance + Purchases + Returns - Sales ± Adjustments == Current Balance
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  {reconciliation.summary.auditPassed
-                    ? 'Double-Entry Audit Ledger Verified'
-                    : 'Discrepancies Detected in Ledger'}
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Verified mathematical formula: Opening Balance + Purchases + Returns - Sales ± Adjustments == Current Balance
+
+              <div className="text-right">
+                <span className="text-[10px] font-bold uppercase text-slate-400">Audited Batches</span>
+                <p className="text-2xl font-bold font-mono text-slate-900">
+                  {totalAudited}
                 </p>
               </div>
             </div>
 
-            <div className="text-right">
-              <span className="text-[10px] font-bold uppercase text-slate-400">Audited Batches</span>
-              <p className="text-2xl font-bold font-mono text-slate-900">
-                {reconciliation.summary.totalActiveBatchesAudited}
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
-            <div className="p-4 border-b border-slate-100">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Audit Discrepancy Findings ({reconciliation.discrepancies.length})
-              </h4>
-            </div>
-
-            {reconciliation.discrepancies.length === 0 ? (
-              <div className="p-8 text-center text-xs text-emerald-700 bg-emerald-50/30">
-                <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-                <p className="font-bold text-sm">Perfect Stock Movement Concordance</p>
-                <p className="text-slate-500 mt-1">
-                  All active batches have 100% mathematical integrity across historical ledger entries.
-                </p>
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+              <div className="p-4 border-b border-slate-100">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Audit Discrepancy Findings ({discrepanciesList.length})
+                </h4>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 uppercase font-semibold">
-                      <th className="py-3 px-5">Batch #</th>
-                      <th className="py-3 px-5">Medicine</th>
-                      <th className="py-3 px-5 text-center">Recorded Balance</th>
-                      <th className="py-3 px-5 text-center">Movement Ledger Sum</th>
-                      <th className="py-3 px-5 text-center">Variance</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {reconciliation.discrepancies.map((d) => (
-                      <tr key={d.batchId} className="hover:bg-rose-50/50">
-                        <td className="py-3 px-5 font-mono font-bold text-slate-900">
-                          {d.batchNumber}
-                        </td>
-                        <td className="py-3 px-5">{d.medicineName}</td>
-                        <td className="py-3 px-5 text-center font-mono">{d.recordedBalance}</td>
-                        <td className="py-3 px-5 text-center font-mono">{d.calculatedBalance}</td>
-                        <td className="py-3 px-5 text-center font-mono font-bold text-rose-600">
-                          {d.discrepancy > 0 ? `+${d.discrepancy}` : d.discrepancy}
-                        </td>
+
+              {discrepanciesList.length === 0 ? (
+                <div className="p-8 text-center text-xs text-emerald-700 bg-emerald-50/30">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
+                  <p className="font-bold text-sm">Perfect Stock Movement Concordance</p>
+                  <p className="text-slate-500 mt-1">
+                    All active batches have 100% mathematical integrity across historical ledger entries.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 uppercase font-semibold">
+                        <th className="py-3 px-5">Batch #</th>
+                        <th className="py-3 px-5">Medicine</th>
+                        <th className="py-3 px-5 text-center">Recorded Balance</th>
+                        <th className="py-3 px-5 text-center">Movement Ledger Sum</th>
+                        <th className="py-3 px-5 text-center">Variance</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {discrepanciesList.map((d: any) => (
+                        <tr key={d.batchId} className="hover:bg-rose-50/50">
+                          <td className="py-3 px-5 font-mono font-bold text-slate-900">
+                            {d.batchNumber}
+                          </td>
+                          <td className="py-3 px-5">{d.medicineName}</td>
+                          <td className="py-3 px-5 text-center font-mono">{d.recordedBalance}</td>
+                          <td className="py-3 px-5 text-center font-mono">{d.calculatedBalance}</td>
+                          <td className="py-3 px-5 text-center font-mono font-bold text-rose-600">
+                            {d.discrepancy > 0 ? `+${d.discrepancy}` : d.discrepancy}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

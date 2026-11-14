@@ -374,6 +374,29 @@ export const reportApi = {
   },
   getReconciliationReport: async (): Promise<ReconciliationReport> => {
     const res = await api.get('/reports/reconciliation');
-    return res.data.data;
+    const raw = res.data.data || res.data;
+    if (raw && !raw.summary) {
+      const disc = (raw.batches || [])
+        .filter((b: any) => !b.isReconciled || b.variance !== 0)
+        .map((b: any) => ({
+          batchId: b.batchId?.toString() || b._id,
+          batchNumber: b.batchNumber,
+          medicineName: b.medicineName || 'Medicine',
+          recordedBalance: b.currentActualStock ?? 0,
+          calculatedBalance: b.ledgerCalculatedStock ?? 0,
+          discrepancy: b.variance ?? 0,
+        }));
+      return {
+        summary: {
+          totalActiveBatchesAudited: raw.totalBatchesAudited ?? (raw.batches?.length || 0),
+          discrepancyCount: raw.totalDiscrepancies ?? disc.length,
+          auditPassed: (raw.totalDiscrepancies === 0 || raw.reconciliationStatus === 'PERFECTLY_RECONCILED'),
+          generatedAt: raw.reconciliationTimestamp || new Date().toISOString(),
+        },
+        discrepancies: disc,
+        ...raw,
+      };
+    }
+    return raw;
   },
 };
