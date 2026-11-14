@@ -6,10 +6,13 @@ import { generateToken } from '../utils/jwt.js';
 export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, password } = req.body;
+    console.log('[Login Request Received]', { rawEmail: email, passwordLength: password?.length, typeOfEmail: typeof email });
 
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
     const user = await User.findOne({ email: normalizedEmail }).select('+password');
+    console.log('[Login User Lookup]', { normalizedEmail, foundUser: !!user, userRole: user?.role, userEmail: user?.email });
     if (!user) {
+      console.log('[Login Failed: User Not Found]', { normalizedEmail });
       res.status(401).json({
         success: false,
         message: 'Invalid email or password',
@@ -47,6 +50,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     }
 
     if (!isMatch) {
+      console.log('[Login Failed: Password Mismatch]', { email: user.email, candidateLength: password?.length });
       res.status(401).json({
         success: false,
         message: 'Invalid email or password',
@@ -75,17 +79,23 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       userAgent: req.headers['user-agent'],
     });
 
+    const userPayload = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+      lastLogin: user.lastLogin,
+    };
+
     res.status(200).json({
       success: true,
       message: 'Login successful',
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
-        lastLogin: user.lastLogin,
+      user: userPayload,
+      data: {
+        token,
+        user: userPayload,
       },
     });
   } catch (error) {
@@ -147,16 +157,22 @@ export const register = async (req: Request, res: Response, next: NextFunction):
       userAgent: req.headers['user-agent'],
     });
 
+    const userPayload = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+    };
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
+      user: userPayload,
+      data: {
+        token,
+        user: userPayload,
       },
     });
   } catch (error) {
@@ -173,18 +189,21 @@ export const getMe = (req: Request, res: Response): void => {
     return;
   }
 
+  const userPayload = {
+    id: req.user._id,
+    name: req.user.name,
+    email: req.user.email,
+    role: req.user.role,
+    phone: req.user.phone,
+    isActive: req.user.isActive,
+    lastLogin: req.user.lastLogin,
+    createdAt: req.user.createdAt,
+  };
+
   res.status(200).json({
     success: true,
-    user: {
-      id: req.user._id,
-      name: req.user.name,
-      email: req.user.email,
-      role: req.user.role,
-      phone: req.user.phone,
-      isActive: req.user.isActive,
-      lastLogin: req.user.lastLogin,
-      createdAt: req.user.createdAt,
-    },
+    user: userPayload,
+    data: userPayload,
   });
 };
 
@@ -239,16 +258,19 @@ export const updateProfile = async (
 
     await user.save();
 
+    const userPayload = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+    };
+
     res.status(200).json({
       success: true,
       message: 'Profile updated successfully',
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
-      },
+      user: userPayload,
+      data: userPayload,
     });
   } catch (error) {
     next(error);

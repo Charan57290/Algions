@@ -20,6 +20,9 @@ export const getDashboardSummaryMetrics = async () => {
     nearExpiryCount,
     recentSales,
     recentPurchases,
+    expiringBatches,
+    totalBatchesCount,
+    expiredBatchesCount,
   ] = await Promise.all([
     Medicine.countDocuments({ isActive: true }),
     Supplier.countDocuments(),
@@ -54,16 +57,31 @@ export const getDashboardSummaryMetrics = async () => {
     Sale.find().sort({ createdAt: -1 }).limit(5).populate('cashier', 'name email'),
     // 5 Most recent purchases
     Purchase.find().sort({ purchaseDate: -1 }).limit(5).populate('supplier', 'name supplierCode'),
+    // Batches expiring in next 30 days with medicine details
+    Batch.find({
+      expiryDate: { $gt: now, $lte: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) },
+      availableQuantity: { $gt: 0 },
+    }).populate('medicine', 'name strength dosageForm'),
+    // Total batches count
+    Batch.countDocuments(),
+    // Expired batches with available stock
+    Batch.countDocuments({ expiryDate: { $lte: now }, availableQuantity: { $gt: 0 } }),
   ]);
 
-  // Low stock medicines count
-  const allMedicines = await Medicine.find({ isActive: true }).select('_id reorderThreshold');
+  // Low stock medicines with detailed objects
+  const allMedicines = await Medicine.find({ isActive: true });
   const batchStockByMed = await Batch.aggregate([
     { $match: { expiryDate: { $gt: now }, availableQuantity: { $gt: 0 } } },
     { $group: { _id: '$medicine', stock: { $sum: '$availableQuantity' } } },
   ]);
   const stockMap = new Map(batchStockByMed.map((b) => [b._id.toString(), b.stock]));
   const lowStockCount = allMedicines.filter((m) => (stockMap.get(m._id.toString()) || 0) <= m.reorderThreshold).length;
+  const lowStockMedicines = allMedicines
+    .filter((m) => (stockMap.get(m._id.toString()) || 0) <= m.reorderThreshold)
+    .map((m) => ({
+      ...m.toObject(),
+      totalAvailableStock: stockMap.get(m._id.toString()) || 0,
+    }));
 
   // 7-Day sales trend for chart
   const sevenDaysAgo = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000);
@@ -78,6 +96,62 @@ export const getDashboardSummaryMetrics = async () => {
     },
     { $sort: { _id: 1 } },
   ]);
+
+  const trendMap = new Map(salesTrend.map((t) => [t._id, t]));
+  const sevenDayTrend = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(startOfToday.getTime() - i * 24 * 60 * 60 * 1000);
+    const dateStr = d.toISOString().split('T')[0];
+    const item = trendMap.get(dateStr);
+    sevenDayTrend.push({
+      date: dateStr,
+      revenue: item?.revenue || 0,
+      cogs: 0,
+      margin: item?.revenue || 0,
+      orderCount: item?.transactions || 0,
+    });
+  }
+
+  const totalPurchaseVal = inventoryAgg[0]?.totalInventoryCost || 0;
+  const totalRetailVal = inventoryAgg[0]?.totalRetailValue || 0;
+  const valuation = {
+    totalPurchaseValuation: Math.round(totalPurchaseVal * 100) / 100,
+    totalRetailValuation: Math.round(totalRetailVal * 100) / 100,
+    potentialGrossMargin: Math.round((totalRetailVal - totalPurchaseVal) * 100) / 100,
+    expiredValuationLoss: 0,
+  };
+
+  const inventory = {
+    totalBatches: totalBatchesCount,
+    totalMedicines,
+    lowStockCount,
+    expiringWithin30DaysCount: nearExpiryCount,
+    expiredBatchesCount,
+  };
+
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const pastMonthSales = await Sale.find({ createdAt: { $gte: thirtyDaysAgo }, status: { $ne: SaleStatus.CANCELLED } });
+  const salesCount = pastMonthSales.length;
+  const netSalesRevenue = pastMonthSales.reduce((acc, s) => acc + (s.grandTotal || 0), 0);
+  const grossSalesRevenue = pastMonthSales.reduce((acc, s) => acc + (s.subtotal || 0), 0);
+  const totalCogs = pastMonthSales.reduce((acc, s) => {
+    return acc + (s.items || []).reduce((iAcc, item) => iAcc + (item.purchasePriceSnapshot || 0) * (item.quantity || 0), 0);
+  }, 0);
+  const grossProfit = Math.max(0, netSalesRevenue - totalCogs);
+  const profitMarginPercent = netSalesRevenue > 0 ? (grossProfit / netSalesRevenue) * 100 : 0;
+  const totalUnitsSold = pastMonthSales.reduce((acc, s) => {
+    return acc + (s.items || []).reduce((iAcc, item) => iAcc + (item.quantity || 0), 0);
+  }, 0);
+
+  const salesPerformance = {
+    salesCount,
+    grossSalesRevenue: Math.round(grossSalesRevenue * 100) / 100,
+    netSalesRevenue: Math.round(netSalesRevenue * 100) / 100,
+    totalCogs: Math.round(totalCogs * 100) / 100,
+    grossProfit: Math.round(grossProfit * 100) / 100,
+    profitMarginPercent: Math.round(profitMarginPercent * 10) / 10,
+    totalUnitsSold,
+  };
 
   return {
     kpis: {
@@ -96,6 +170,12 @@ export const getDashboardSummaryMetrics = async () => {
     salesTrend,
     recentSales,
     recentPurchases,
+    inventory,
+    valuation,
+    salesPerformance,
+    sevenDayTrend,
+    expiringBatches,
+    lowStockMedicines,
   };
 };
 

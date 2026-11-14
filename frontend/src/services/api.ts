@@ -55,7 +55,7 @@ api.interceptors.response.use(
 export const authApi = {
   login: async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
     const res = await api.post('/auth/login', credentials);
-    return res.data.data;
+    return res.data.data || res.data;
   },
   register: async (data: {
     name: string;
@@ -64,11 +64,11 @@ export const authApi = {
     phone?: string;
   }): Promise<AuthResponse> => {
     const res = await api.post('/auth/register', data);
-    return res.data.data;
+    return res.data.data || res.data;
   },
   getMe: async (): Promise<User> => {
     const res = await api.get('/auth/me');
-    return res.data.data;
+    return res.data.data || res.data.user || res.data;
   },
   updateProfile: async (data: {
     name?: string;
@@ -77,15 +77,15 @@ export const authApi = {
     newPassword?: string;
   }): Promise<User> => {
     const res = await api.put('/auth/profile', data);
-    return res.data.data;
+    return res.data.data || res.data.user || res.data;
   },
   getAllUsers: async (): Promise<User[]> => {
     const res = await api.get('/users');
-    return res.data.data;
+    return res.data.data || res.data;
   },
   toggleUserStatus: async (userId: string, isActive: boolean): Promise<User> => {
     const res = await api.patch(`/users/${userId}/status`, { isActive });
-    return res.data.data;
+    return res.data.data || res.data;
   },
 };
 

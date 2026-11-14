@@ -69,7 +69,32 @@ export const DashboardPage: React.FC = () => {
     );
   }
 
-  const { inventory, valuation, salesPerformance, sevenDayTrend, recentSales, expiringBatches, lowStockMedicines } = kpis;
+  const expiringBatches = kpis.expiringBatches || [];
+  const lowStockMedicines = kpis.lowStockMedicines || [];
+  const sevenDayTrend = kpis.sevenDayTrend || [];
+  const recentSales = kpis.recentSales || [];
+  const inventory = kpis.inventory || {
+    totalBatches: 0,
+    totalMedicines: (kpis as any).kpis?.totalMedicines || 0,
+    lowStockCount: (kpis as any).kpis?.lowStockMedicinesCount || 0,
+    expiringWithin30DaysCount: (kpis as any).kpis?.nearExpiryBatchesCount || 0,
+    expiredBatchesCount: 0,
+  };
+  const valuation = kpis.valuation || {
+    totalPurchaseValuation: (kpis as any).kpis?.totalInventoryCost || 0,
+    totalRetailValuation: (kpis as any).kpis?.totalRetailValue || 0,
+    potentialGrossMargin: 0,
+    expiredValuationLoss: 0,
+  };
+  const salesPerformance = kpis.salesPerformance || {
+    salesCount: (kpis as any).kpis?.todayOrders || 0,
+    grossSalesRevenue: (kpis as any).kpis?.todayRevenue || 0,
+    netSalesRevenue: (kpis as any).kpis?.todayRevenue || 0,
+    totalCogs: 0,
+    grossProfit: 0,
+    profitMarginPercent: 0,
+    totalUnitsSold: 0,
+  };
 
   return (
     <div className="space-y-8">
