@@ -10,9 +10,11 @@ import {
   ArrowRight,
   ShieldAlert,
   FileText,
+  Pill,
 } from 'lucide-react';
-import { reportApi, saleApi } from '../../services/api';
-import type { DashboardKPIs, InvoicePayload } from '../../types';
+import { reportApi, saleApi, masterDataApi } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import type { DashboardKPIs, InvoicePayload, Medicine } from '../../types';
 import { StatCard } from '../../components/common/StatCard';
 import { Badge } from '../../components/common/Badge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -28,12 +30,29 @@ import {
 } from 'recharts';
 
 export const DashboardPage: React.FC = () => {
+  const { user, isCustomer } = useAuth();
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
+  const [featuredMeds, setFeaturedMeds] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoicePayload | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState<boolean>(false);
 
   useEffect(() => {
+    if (isCustomer) {
+      const fetchCustomerData = async () => {
+        try {
+          const res = await masterDataApi.getMedicines({ limit: 6, isActive: true });
+          setFeaturedMeds(Array.isArray(res) ? res : (res?.medicines || []));
+        } catch (err) {
+          console.error('Failed to load medicine catalogue for customer:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchCustomerData();
+      return;
+    }
+
     const fetchDashboardData = async () => {
       try {
         const data = await reportApi.getDashboardKPIs();
@@ -45,7 +64,7 @@ export const DashboardPage: React.FC = () => {
       }
     };
     fetchDashboardData();
-  }, []);
+  }, [isCustomer]);
 
   const handleViewInvoice = async (saleId: string) => {
     try {
@@ -59,6 +78,120 @@ export const DashboardPage: React.FC = () => {
 
   if (loading) {
     return <LoadingSpinner message="Calculating real-time pharmacy analytics..." />;
+  }
+
+  if (isCustomer) {
+    return (
+      <div className="space-y-6">
+        {/* Customer Welcome Hero */}
+        <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-900 rounded-3xl p-8 text-white shadow-sm relative overflow-hidden">
+          <div className="relative z-10 max-w-2xl">
+            <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold tracking-wide text-emerald-100 uppercase">
+              Customer Portal
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-extrabold mt-3 tracking-tight">
+              Welcome, {user?.name || 'Valued Customer'}!
+            </h1>
+            <p className="text-emerald-100 text-sm mt-2 leading-relaxed">
+              Explore available pharmaceutical inventory, check medicine batch availability, and find essential health supplies in real-time.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                to="/medicines"
+                className="px-5 py-2.5 bg-white text-emerald-900 font-bold rounded-xl text-xs hover:bg-emerald-50 transition shadow-sm flex items-center gap-2"
+              >
+                <Pill className="w-4 h-4 text-emerald-700" />
+                Browse Medicine Catalogue
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-700 font-bold mb-3">
+              <Pill className="w-5 h-5" />
+            </div>
+            <h3 className="font-bold text-slate-900 text-sm">Genuine & Verified Stock</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Every pharmaceutical SKU is tracked with discrete batch numbers, manufacturing seals, and strict expiry dates.
+            </p>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-700 font-bold mb-3">
+              <Clock className="w-5 h-5" />
+            </div>
+            <h3 className="font-bold text-slate-900 text-sm">24/7 Store Pharmacy</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              In-store pharmacists are available round-the-clock for prescription verification and drug consultations.
+            </p>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-700 font-bold mb-3">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <h3 className="font-bold text-slate-900 text-sm">Regulated Dispensing</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Prescription-only drugs require an authorized medical doctor prescription upon in-store pickup.
+            </p>
+          </div>
+        </div>
+
+        {/* Featured Medicines Preview */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Available Medicines Catalogue
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Popular medicines currently stocked in the pharmacy
+              </p>
+            </div>
+            <Link
+              to="/medicines"
+              className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+            >
+              View Full Catalogue <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {featuredMeds.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 text-xs">
+              Loading available medicines...
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {featuredMeds.map((med) => (
+                <div
+                  key={med._id}
+                  className="p-4 rounded-xl border border-slate-200 hover:border-emerald-300 hover:shadow-xs transition bg-slate-50/50"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="font-bold text-slate-900 text-sm">{med.name}</div>
+                    <Badge variant={(med.totalAvailableStock || 0) > 0 ? 'success' : 'neutral'} size="sm">
+                      {(med.totalAvailableStock || 0) > 0 ? `${med.totalAvailableStock} in stock` : 'Out of stock'}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">{med.genericName}</p>
+                  <div className="mt-3 flex items-center justify-between text-xs text-slate-600">
+                    <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 font-medium text-[11px]">
+                      {med.dosageForm} • {med.strength}
+                    </span>
+                    <span className="font-bold text-emerald-700 text-xs">
+                      {med.brandName || 'Generic'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   if (!kpis) {
